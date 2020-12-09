@@ -2,3 +2,4 @@
 sftp-config.json
 save/
 .idea/
+__pycache__/
