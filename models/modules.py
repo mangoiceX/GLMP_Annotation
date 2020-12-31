@@ -100,7 +100,7 @@ class ExternalKnowledge(nn.Module):
         self.m_story.append(embed_C)
         return self.sigmoid(prob_logit), u[-1] #global pointer，和KB中读出来的值
 
-    def forward(self, query_vector, global_pointer):  #这个输出有什么作用，在什么时候forward会运行
+    def forward(self, query_vector, global_pointer):  #local encoder要queryEK得到local pointer
         u = [query_vector]
         for hop in range(self.max_hops):
             m_A = self.m_story[hop] 
@@ -130,7 +130,7 @@ class LocalMemoryDecoder(nn.Module):
         self.embedding_dim = embedding_dim
         self.dropout = dropout
         self.dropout_layer = nn.Dropout(dropout) 
-        self.C = shared_emb 
+        self.C = shared_emb   # [116 128]
         self.softmax = nn.Softmax(dim=1)
         self.sketch_rnn = nn.GRU(embedding_dim, embedding_dim, dropout=dropout)
         self.relu = nn.ReLU()
@@ -143,7 +143,7 @@ class LocalMemoryDecoder(nn.Module):
         all_decoder_outputs_vocab = _cuda(torch.zeros(max_target_length, batch_size, self.num_vocab))
         all_decoder_outputs_ptr = _cuda(torch.zeros(max_target_length, batch_size, story_size[1]))
         decoder_input = _cuda(torch.LongTensor([SOS_token] * batch_size))
-        memory_mask_for_step = _cuda(torch.ones(story_size[0], story_size[1]))
+        memory_mask_for_step = _cuda(torch.ones(story_size[0], story_size[1]))  # [8 70]
         decoded_fine, decoded_coarse = [], []
         
         hidden = self.relu(self.projector(encode_hidden)).unsqueeze(0) #the encoded dialogue history he
@@ -152,15 +152,15 @@ class LocalMemoryDecoder(nn.Module):
         for t in range(max_target_length):
             embed_q = self.dropout_layer(self.C(decoder_input)) # b * e
             if len(embed_q.size()) == 1: embed_q = embed_q.unsqueeze(0)
-            _, hidden = self.sketch_rnn(embed_q.unsqueeze(0), hidden)
-            query_vector = hidden[0] #sketch_rnn的最后隐含态作为query EK还有预测下一个词
+            _, hidden = self.sketch_rnn(embed_q.unsqueeze(0), hidden)  # [1 8 128]
+            query_vector = hidden[0] #sketch_rnn的最后隐含态作为query EK还有预测下一个词  [8 128]
             
-            p_vocab = self.attend_vocab(self.C.weight, hidden.squeeze(0))
+            p_vocab = self.attend_vocab(self.C.weight, hidden.squeeze(0))  # [8 116]
             all_decoder_outputs_vocab[t] = p_vocab
-            _, topvi = p_vocab.data.topk(1)
+            _, topvi = p_vocab.data.topk(1)  # [8 1]
             
             # query the external konwledge using the hidden state of sketch RNN
-            prob_soft, prob_logits = extKnow(query_vector, global_pointer)  #这里使用了EK的forward来
+            prob_soft, prob_logits = extKnow(query_vector, global_pointer)  #这里使用了EK的forward来  [8 70]
             all_decoder_outputs_ptr[t] = prob_logits  # local pointer
 
             #下面这些暂时看不懂
@@ -174,7 +174,7 @@ class LocalMemoryDecoder(nn.Module):
 
                 search_len = min(5, min(story_lengths))
                 prob_soft = prob_soft * memory_mask_for_step
-                _, toppi = prob_soft.data.topk(search_len)
+                _, toppi = prob_soft.data.topk(search_len)  # [8 search_len]
                 temp_f, temp_c = [], []
                 
                 for bi in range(batch_size):
@@ -201,7 +201,7 @@ class LocalMemoryDecoder(nn.Module):
 
     def attend_vocab(self, seq, cond):
         scores_ = cond.matmul(seq.transpose(1,0))
-        # scores = F.softmax(scores_, dim=1)
+        #scores = F.softmax(scores_, dim=1)
         return scores_
 
 

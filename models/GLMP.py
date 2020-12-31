@@ -33,7 +33,7 @@ class GLMP(nn.Module):
         self.decoder_hop = n_layers  #hop就是层数
         self.softmax = nn.Softmax(dim=0)
 
-        if path:#加载已存在的模型
+        if path:#加载已存在的模型, 默认加载的模型参数是GPU
             if USE_CUDA:
                 print("MODEL {} LOADED".format(str(path)))
                 self.encoder = torch.load(str(path)+'/enc.th')
@@ -77,7 +77,7 @@ class GLMP(nn.Module):
         directory = 'save/GLMP-'+args["addName"]+name_data+str(self.task)+'HDD'+str(self.hidden_size)+'BSZ'+str(args['batch'])+'DR'+str(self.dropout)+'L'+layer_info+'lr'+str(self.lr)+str(dec_type)                 
         if not os.path.exists(directory):
             os.makedirs(directory)
-        #为什么将这三个模块分开存储
+
         torch.save(self.encoder, directory + '/enc.th')
         torch.save(self.extKnow, directory + '/enc_kb.th')
         torch.save(self.decoder, directory + '/dec.th')
@@ -152,7 +152,7 @@ class GLMP(nn.Module):
         dh_outputs, dh_hidden = self.encoder(conv_story, data['conv_arr_lengths'])  #对对话进行编码
         #dh_hidden是 global Encoder输出的最后隐含状态
         global_pointer, kb_readout = self.extKnow.load_memory(story, data['kb_arr_lengths'], data['conv_arr_lengths'], dh_hidden, dh_outputs)
-        # 将论文中说的Global Encoder输出的编码的对话历史和从KB中读出来的内容荣进行连接
+        # 将论文中说的Global Encoder输出的编码的对话历史和从KB中读出来的内容进行连接
         encoded_hidden = torch.cat((dh_hidden.squeeze(0), kb_readout), dim=1)
         
         # Get the words that can be copy from the memory

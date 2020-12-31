@@ -39,7 +39,7 @@ parser.add_argument('-rec','--record', help='use record function during inferenc
 # parser.add_argument('-beam','--beam_search', help='use beam_search during inference, default is greedy search', type=int, required=False, default=0)
 # parser.add_argument('-viz','--vizualization', help='vizualization', type=int, required=False, default=0)
 
-args = vars(parser.parse_args())
+args = vars(parser.parse_args())  #返回属性和属性值的字典对象
 print(str(args))
 print("USE_CUDA: "+str(USE_CUDA))
 
