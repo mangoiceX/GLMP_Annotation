@@ -55,7 +55,7 @@ class ExternalKnowledge(nn.Module):
         self.C = AttrProxy(self, "C_")
         self.softmax = nn.Softmax(dim=1)
         self.sigmoid = nn.Sigmoid()
-        self.conv_layer = nn.Conv1d(embedding_dim, embedding_dim, 5, padding=2)
+        #self.conv_layer = nn.Conv1d(embedding_dim, embedding_dim, 5, padding=2)
 
     def add_lm_embedding(self, full_memory, kb_len, conv_len, hiddens):
         for bi in range(full_memory.size(0)):
@@ -76,12 +76,12 @@ class ExternalKnowledge(nn.Module):
             embed_A = torch.sum(embed_A, 2).squeeze(2) # b * m * e
             if not args["ablationH"]: #消除实验，如果不加入隐含状态也就是Global Encoder的Context RNN没有隐含状态没有写入EK
                 embed_A = self.add_lm_embedding(embed_A, kb_len, conv_len, dh_outputs)
-            embed_A = self.dropout_layer(embed_A)
+            embed_A = self.dropout_layer(embed_A)  #我没有添加droptout
             
             if(len(list(u[-1].size()))==1): 
                 u[-1] = u[-1].unsqueeze(0) ## used for bsz = 1.
             u_temp = u[-1].unsqueeze(1).expand_as(embed_A)
-            prob_logit = torch.sum(embed_A*u_temp, 2) # 计算EK步骤的attention weight,也就是全局指针
+            prob_logit = torch.sum(embed_A*u_temp, 2)  # 计算EK步骤的attention weight,也就是全局指针
             prob_   = self.softmax(prob_logit)
             
             embed_C = self.C[hop+1](story.contiguous().view(story_size[0], -1).long()) #词袋表示，去除第k hop
