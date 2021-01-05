@@ -159,7 +159,6 @@ class Dataset(data.Dataset):  # 自定义数据集
 
         return data_info  #这里返回的就是批数据
 
-
 def get_seq(pairs, lang, batch_size, type):
     data_info = {}
     for k in pairs[0].keys():
@@ -177,5 +176,6 @@ def get_seq(pairs, lang, batch_size, type):
     data_loader = torch.utils.data.DataLoader(dataset=dataset,
                                               batch_size=batch_size,
                                               # shuffle=type,
-                                              collate_fn=dataset.collate_fn)  # 这个函数处理步骤未理解
+                                              collate_fn=dataset.collate_fn,
+                                              drop_last=True)  # 这个函数处理步骤未理解
     return data_loader

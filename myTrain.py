@@ -26,7 +26,7 @@ else:
 
 # Configure models and load data
 avg_best, cnt, acc = 0.0, 0, 0.0
-train, dev, test, testOOV, lang, max_resp_len = prepare_data_seq(args['task'], batch_size=int(args['batch']))
+train, dev, test, testOOV, lang, max_resp_len = prepare_data_seq(args['task'], args['batch'])
 
 model = globals()[args['decoder']](
     int(args['hidden']), 

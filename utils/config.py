@@ -18,7 +18,7 @@ parser.add_argument('-ds','--dataset', help='dataset, babi or kvr', required=Fal
 parser.add_argument('-t','--task', help='Task Number', required=False, default="")
 parser.add_argument('-dec','--decoder', help='decoder model', required=False)
 parser.add_argument('-hdd','--hidden', help='Hidden size', required=False)
-parser.add_argument('-bsz','--batch', help='Batch_size', required=False)
+parser.add_argument('-bsz','--batch', help='Batch_size', required=False, type=int)
 parser.add_argument('-lr','--learn', help='Learning Rate', required=False)
 parser.add_argument('-dr','--drop', help='Drop Out', required=False)
 parser.add_argument('-um','--unk_mask', help='mask out input token to UNK', type=int, required=False, default=1)

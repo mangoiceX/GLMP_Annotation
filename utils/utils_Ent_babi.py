@@ -112,7 +112,7 @@ def generate_template(global_entity, sentence, type_dict):  #sketch-RNN生成ske
     return sketch_response
 
 
-def prepare_data_seq(task, batch_size=100):
+def prepare_data_seq(task, batch_size):
     data_path = 'data/dialog-bAbI-tasks/dialog-babi'
     file_train = '{}-task{}trn.txt'.format(data_path, task)
     file_dev = '{}-task{}dev.txt'.format(data_path, task)
@@ -132,7 +132,7 @@ def prepare_data_seq(task, batch_size=100):
 
     train = get_seq(pair_train, lang, batch_size, True)
     #最后一个参数的解释：因为lang在train数据集上需要做进行编码，后面的dev和test使用的也是lang，所以不需要再次hash,改为first
-    dev   = get_seq(pair_dev, lang, 100, False)
+    dev   = get_seq(pair_dev, lang, batch_size, False)  # 之前batch_size固定为100
     test  = get_seq(pair_test, lang, batch_size, False)
     testoov = get_seq(pair_testoov, lang, batch_size, False)
 
