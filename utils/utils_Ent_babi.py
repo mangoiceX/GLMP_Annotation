@@ -114,11 +114,11 @@ def generate_template(global_entity, sentence, type_dict):  #sketch-RNN生成ske
 
 def prepare_data_seq(task, batch_size):
     data_path = 'data/dialog-bAbI-tasks/dialog-babi'
-    file_train = '{}-task{}trn.txt'.format(data_path, task)
-    file_dev = '{}-task{}dev.txt'.format(data_path, task)
-    file_test = '{}-task{}tst.txt'.format(data_path, task)
+    file_train = '{}-task{}trn-small.txt'.format(data_path, task)
+    file_dev = '{}-task{}dev-small.txt'.format(data_path, task)
+    file_test = '{}-task{}tst-small.txt'.format(data_path, task)
     kb_path = data_path+'-kb-all.txt'
-    file_test_OOV = '{}-task{}tst-OOV.txt'.format(data_path, task)  #OOV文件是out of vocabulary测试文件
+    file_test_OOV = '{}-task{}tst-OOV-small.txt'.format(data_path, task)  #OOV文件是out of vocabulary测试文件
     type_dict = get_type_dict(kb_path, dstc2=False)  #三元组词典，{饭店和关系作为键，其他作为值}饭店都是Subject,其他都是Object
     global_ent = entityList('data/dialog-bAbI-tasks/dialog-babi-kb-all.txt',int(task)) #收集所有的Subject和Object
 

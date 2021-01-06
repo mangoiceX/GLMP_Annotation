@@ -69,7 +69,7 @@ class GLMP(nn.Module):
         print_loss_v = self.loss_v / self.print_every
         print_loss_l = self.loss_l / self.print_every
         self.print_every += 1     
-        return 'L:{:.2f},LE:{:.2f},LG:{:.2f},LP:{:.2f}'.format(print_loss_avg, print_loss_g, print_loss_v, print_loss_l)
+        return 'L:{:.2f},LG:{:.2f},LL:{:.2f},LV:{:.2f}'.format(print_loss_avg, print_loss_g, print_loss_l, print_loss_v)
     
     def save_model(self, dec_type):
         name_data = "KVR/" if self.task=='' else "BABI/"
@@ -106,7 +106,7 @@ class GLMP(nn.Module):
         # Loss calculation and backpropagation
         loss_g = self.criterion_bce(global_pointer, data['selector_index'])
         loss_v = masked_cross_entropy(
-            all_decoder_outputs_vocab.transpose(0, 1).contiguous(), 
+            all_decoder_outputs_vocab.transpose(0, 1).contiguous(),
             data['sketch_response'].contiguous(), 
             data['response_lengths'])
         loss_l = masked_cross_entropy(

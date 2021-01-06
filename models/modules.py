@@ -89,7 +89,7 @@ class ExternalKnowledge(nn.Module):
             embed_C = torch.sum(embed_C, 2).squeeze(2)
             if not args["ablationH"]:
             #消除实验是将Context RNN的输出而不是最后的隐含状态写入KB，论文指的隐状态就是输出，因为RNN输出是对文本转换，将转化后的文本存入
-            #KB中蔡符合常识
+            #KB中符合常识
                 embed_C = self.add_lm_embedding(embed_C, kb_len, conv_len, dh_outputs)
 
             prob = prob_.unsqueeze(2).expand_as(embed_C)
@@ -184,13 +184,14 @@ class LocalMemoryDecoder(nn.Module):
                     if '@' in self.lang.index2word[token]:
                         cw = 'UNK'
                         for i in range(search_len):
-                            if toppi[:,i][bi] < story_lengths[bi]-1: 
-                                cw = copy_list[bi][toppi[:,i][bi].item()]            
+                            # ti = toppi[:,i][bi]
+                            if toppi[bi][i] < story_lengths[bi]-1:
+                                cw = copy_list[bi][toppi[bi][i].item()]
                                 break
                         temp_f.append(cw)
                         
                         if args['record']:
-                            memory_mask_for_step[bi, toppi[:,i][bi].item()] = 0
+                            memory_mask_for_step[bi, toppi[bi][i].item()] = 0
                     else:
                         temp_f.append(self.lang.index2word[token])
 
