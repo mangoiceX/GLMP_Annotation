@@ -24,6 +24,7 @@ class ContextRNN(nn.Module):#Global Memory encoder的一个组件
     def forward(self, input_seqs, input_lengths, hidden=None):
         #input_seqs [66 8 4] 66是动态变化的，应该是每个故事长度不同导致的
         # Note: we run this all at once (over multiple batches of multiple sequences)
+        #embedded = self.embedding(input_seqs)
         embedded = self.embedding(input_seqs.contiguous().view(input_seqs.size(0), -1).long())  #contiguous返回连续内存的数据
         #[66 32 128]
         embedded = embedded.view(input_seqs.size()+(embedded.size(-1),))  #这一步是干嘛[66 8 4 128]
@@ -36,7 +37,7 @@ class ContextRNN(nn.Module):#Global Memory encoder的一个组件
         #outputs [235 256]  (seq_len, batch, num_directions * hidden_size) hidden [2 8 128](num_layers * num_directions, batch, hidden_size)
         if input_lengths:
            outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=False)   #[66 8 256]恢复正常
-        hidden = self.W(torch.cat((hidden[0], hidden[1]), dim=1)).unsqueeze(0)
+        hidden = self.W(torch.cat((hidden[0], hidden[1]), dim=1))  # .unsqueeze(0)
         outputs = self.W(outputs)
         return outputs.transpose(0,1), hidden #输出写入EK，最终隐含态用来query EK得到EK步骤的soft memory attention.
 
@@ -63,14 +64,16 @@ class ExternalKnowledge(nn.Module):
             full_memory[bi, start:end, :] = full_memory[bi, start:end, :] + hiddens[bi, :conv_len[bi], :]
         return full_memory
 
-    def load_memory(self, story, kb_len, conv_len, hidden, dh_outputs):
+    def load_memory(self, story, kb_len, conv_len, hidden, dh_outputs):  # 第二次改u
         # Forward multiple hop mechanism
-        u = [hidden.squeeze(0)]
+        #u = [hidden.squeeze(0)]
+        query = hidden
         story_size = story.size()
         self.m_story = []
         #训练时只运行一次，相当于EK的存储，用来存储不同hop的词袋表示，但是KB并没有显示的存储在这里，也就是说只对对话历史进行query
         #KB中知识的作用是用来将对话中单词的关系抽象出来
         for hop in range(self.max_hops):
+            #t = story.contiguous().view(story_size[0], -1)
             embed_A = self.C[hop](story.contiguous().view(story_size[0], -1))#.long()) # b * (m * s) * e
             embed_A = embed_A.view(story_size+(embed_A.size(-1),)) # b * m * s * e
             embed_A = torch.sum(embed_A, 2).squeeze(2) # b * m * e
@@ -78,13 +81,14 @@ class ExternalKnowledge(nn.Module):
                 embed_A = self.add_lm_embedding(embed_A, kb_len, conv_len, dh_outputs)
             embed_A = self.dropout_layer(embed_A)  #我没有添加droptout
             
-            if(len(list(u[-1].size()))==1): 
-                u[-1] = u[-1].unsqueeze(0) ## used for bsz = 1.
-            u_temp = u[-1].unsqueeze(1).expand_as(embed_A)
+            # if(len(list(u[-1].size()))==1):
+            #     u[-1] = u[-1].unsqueeze(0) ## used for bsz = 1.
+            # u_temp = u[-1].unsqueeze(1).expand_as(embed_A)
+            u_temp = query.unsqueeze(1).expand_as(embed_A)
             prob_logit = torch.sum(embed_A*u_temp, 2)  # 计算EK步骤的attention weight,也就是全局指针
             prob_   = self.softmax(prob_logit)
             
-            embed_C = self.C[hop+1](story.contiguous().view(story_size[0], -1).long()) #词袋表示，去除第k hop
+            embed_C = self.C[hop+1](story.contiguous().view(story_size[0], -1)) #词袋表示，去除第k hop
             embed_C = embed_C.view(story_size+(embed_C.size(-1),)) 
             embed_C = torch.sum(embed_C, 2).squeeze(2)
             if not args["ablationH"]:
@@ -94,21 +98,23 @@ class ExternalKnowledge(nn.Module):
 
             prob = prob_.unsqueeze(2).expand_as(embed_C)
             o_k  = torch.sum(embed_C*prob, 1) #将memory中的词袋表示乘以注意力，得到从memory中读取出来的内容
-            u_k = u[-1] + o_k  #u是Context RNN的最后隐含态，作为attention的query向量，根据论文中的公司更新
-            u.append(u_k)
+            # u_k = u[-1] + o_k  #u是Context RNN的最后隐含态，作为attention的query向量，根据论文中的公司更新
+            # u.append(u_k)
+            query = query + o_k
             self.m_story.append(embed_A)
         self.m_story.append(embed_C)
-        return self.sigmoid(prob_logit), u[-1] #global pointer，和KB中读出来的值
+        return self.sigmoid(prob_logit), query # u[-1] #global pointer，和KB中读出来的值
 
     def forward(self, query_vector, global_pointer):  #local encoder要queryEK得到local pointer
-        u = [query_vector]
+        # u = [query_vector]
         for hop in range(self.max_hops):
             m_A = self.m_story[hop] 
             if not args["ablationG"]:
                 m_A = m_A * global_pointer.unsqueeze(2).expand_as(m_A) 
-            if(len(list(u[-1].size()))==1): 
-                u[-1] = u[-1].unsqueeze(0) ## used for bsz = 1.
-            u_temp = u[-1].unsqueeze(1).expand_as(m_A)
+            # if(len(list(u[-1].size()))==1):
+            #     u[-1] = u[-1].unsqueeze(0) ## used for bsz = 1.
+            #u_temp = u[-1].unsqueeze(1).expand_as(m_A)
+            u_temp = query_vector.unsqueeze(1).expand_as(m_A)
             prob_logits = torch.sum(m_A*u_temp, 2)
             prob_soft   = self.softmax(prob_logits)
             m_C = self.m_story[hop+1] 
@@ -116,8 +122,9 @@ class ExternalKnowledge(nn.Module):
                 m_C = m_C * global_pointer.unsqueeze(2).expand_as(m_C)
             prob = prob_soft.unsqueeze(2).expand_as(m_C)
             o_k  = torch.sum(m_C*prob, 1)
-            u_k = u[-1] + o_k
-            u.append(u_k)
+            # u_k = u[-1] + o_k
+            # u.append(u_k)
+            query_vector = query_vector + o_k
         return prob_soft, prob_logits
 
 
@@ -135,7 +142,7 @@ class LocalMemoryDecoder(nn.Module):
         self.sketch_rnn = nn.GRU(embedding_dim, embedding_dim, dropout=dropout)
         self.relu = nn.ReLU()
         self.projector = nn.Linear(2*embedding_dim, embedding_dim)
-        self.conv_layer = nn.Conv1d(embedding_dim, embedding_dim, 5, padding=2)
+        #self.conv_layer = nn.Conv1d(embedding_dim, embedding_dim, 5, padding=2)
         self.softmax = nn.Softmax(dim = 1)
 
     def forward(self, extKnow, story_size, story_lengths, copy_list, encode_hidden, target_batches, max_target_length, batch_size, use_teacher_forcing, get_decoded_words, global_pointer):
@@ -165,7 +172,7 @@ class LocalMemoryDecoder(nn.Module):
 
             #下面这些暂时看不懂
 
-            if use_teacher_forcing:
+            if use_teacher_forcing and False:   # 需要添加这个，效果才会提升较多
                 decoder_input = target_batches[:,t] 
             else:
                 decoder_input = topvi.squeeze()

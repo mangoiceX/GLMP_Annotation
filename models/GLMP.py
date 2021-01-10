@@ -31,7 +31,7 @@ class GLMP(nn.Module):
         self.dropout = dropout
         self.max_resp_len = max_resp_len
         self.decoder_hop = n_layers  #hop就是层数
-        self.softmax = nn.Softmax(dim=0)
+        #self.softmax = nn.Softmax(dim=0)
 
         if path:#加载已存在的模型, 默认加载的模型参数是GPU
             if USE_CUDA:
@@ -178,7 +178,7 @@ class GLMP(nn.Module):
         return outputs_vocab, outputs_ptr, decoded_fine, decoded_coarse, global_pointer
 
     def evaluate(self, dev, matric_best, early_stop=None):
-        print("STARTING EVALUATION")
+        print("\nSTARTING EVALUATION")
         # Set to not-training mode to disable dropout
         self.encoder.train(False)
         self.extKnow.train(False)
