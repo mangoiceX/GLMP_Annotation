@@ -172,8 +172,8 @@ class LocalMemoryDecoder(nn.Module):
 
             #下面这些暂时看不懂
 
-            if use_teacher_forcing and False:   # 需要添加这个，效果才会提升较多
-                decoder_input = target_batches[:,t] 
+            if use_teacher_forcing:   # 需要添加这个，效果才会提升较多
+                decoder_input = target_batches[:, t]  # max_target_length要是每个批次的最长长度，由于use_teacher_forcing有随机性，所以这个不容易出发，是一个随机的bug
             else:
                 decoder_input = topvi.squeeze()
             
@@ -209,7 +209,7 @@ class LocalMemoryDecoder(nn.Module):
 
     def attend_vocab(self, seq, cond):
         scores_ = cond.matmul(seq.transpose(1,0))
-        #scores = F.softmax(scores_, dim=1)
+        scores = F.softmax(scores_, dim=1)
         return scores_
 
 

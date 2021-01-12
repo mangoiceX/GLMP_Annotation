@@ -153,7 +153,7 @@ class GLMP(nn.Module):
         #dh_hidden是 global Encoder输出的最后隐含状态
         global_pointer, kb_readout = self.extKnow.load_memory(story, data['kb_arr_lengths'], data['conv_arr_lengths'], dh_hidden, dh_outputs)
         # 将论文中说的Global Encoder输出的编码的对话历史和从KB中读出来的内容进行连接
-        encoded_hidden = torch.cat((dh_hidden.squeeze(0), kb_readout), dim=1)
+        encoded_hidden = torch.cat((dh_hidden, kb_readout), dim=1)
         
         # Get the words that can be copy from the memory
         batch_size = len(data['context_arr_lengths'])
@@ -206,7 +206,8 @@ class GLMP(nn.Module):
 
         for j, data_dev in pbar: 
             # Encode and Decode
-            _, _, decoded_fine, decoded_coarse, global_pointer = self.encode_and_decode(data_dev, self.max_resp_len, False, True)
+            max_target_length = max(data_dev['response_lengths'])  #这有源代码的bug，已被就地更改
+            _, _, decoded_fine, decoded_coarse, global_pointer = self.encode_and_decode(data_dev, max_target_length, False, True)
             decoded_coarse = np.transpose(decoded_coarse)
             decoded_fine = np.transpose(decoded_fine)
             for bi, row in enumerate(decoded_fine):
